@@ -4,7 +4,7 @@ import (
 	"github.com/gocql/gocql"
 )
 
-type Movie struct {
+type MovieModel struct {
 	MovieID     gocql.UUID `json:"movie_id"`
 	Poster      string     `json:"poster"`
 	Title       string     `json:"title"`
@@ -22,4 +22,14 @@ type Movie struct {
 	Star4       string     `json:"star4"`
 	Votes       string     `json:"votes"`
 	Gross       string     `json:"gross"`
+}
+
+type UserRegister struct {
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+type UserLogin struct {
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }

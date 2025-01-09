@@ -30,7 +30,7 @@ func LoadMovies() {
 		log.Fatalf("Error al leer el archivo: %v", err)
 	}
 
-	var movies []schema.Movie
+	var movies []schema.MovieModel
 	if err := json.Unmarshal(bytes, &movies); err != nil {
 		log.Fatalf("Error al deserializar el archivo: %v", err)
 	}

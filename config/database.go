@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"os"
 
 	"github.com/gocql/gocql"
 )
@@ -9,8 +10,11 @@ import (
 var SESSION *gocql.Session
 
 func ConnectDB() {
-	cluster := gocql.NewCluster("127.0.0.1")
-	cluster.Keyspace = "bd2_proyecto1"
+	host := os.Getenv("CASSANDRA_HOST")
+	keyspace := os.Getenv("CASSANDRA_KEYSPACE")
+
+	cluster := gocql.NewCluster(host)
+	cluster.Keyspace = keyspace
 	cluster.Consistency = gocql.Quorum
 
 	var err error
@@ -28,6 +32,11 @@ func InitDB() {
             name text,
             email text,
             password text
+        );`,
+		`CREATE TABLE IF NOT EXISTS uniqueness_emails (
+            email text PRIMARY KEY,
+            user_id uuid,
+
         );`,
 		`CREATE TABLE IF NOT EXISTS movies (
             movie_id uuid PRIMARY KEY,
