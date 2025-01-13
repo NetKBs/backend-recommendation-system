@@ -1,7 +1,6 @@
 package main
 
 import (
-	"example/api/algorithm"
 	"example/api/auth"
 	"example/api/movie"
 	"example/api/user"
@@ -31,8 +30,6 @@ func main() {
 	auth.RegisterRoutes(r)
 	movie.RegisterRoutes(r)
 	user.RegisterRoutes(r)
-
-	algorithm.GenerateRecommendation("9aa2a501-4263-4049-af7d-9f13ad638b17")
 
 	r.Run()
 }

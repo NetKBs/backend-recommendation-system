@@ -65,7 +65,6 @@ func GenerateRecommendation(user_id string) {
 	// save
 	for _, result := range results {
 		score := float32(result.Score)
-		fmt.Println(result.Score, score)
 		if err := config.SESSION.Query(`INSERT INTO recommendation_by_user (user_id, movie_id, score) VALUES (?, ?, ?)`, result.UserID, result.MovieID, score).Exec(); err != nil {
 			log.Printf("Error: %v\n", err)
 		}
