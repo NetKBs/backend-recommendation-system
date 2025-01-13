@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 	"sync"
 )
 
@@ -61,6 +62,10 @@ func GenerateRecommendation(user_id string) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Score > results[j].Score
+	})
 
 	// save
 	for _, result := range results {

@@ -40,21 +40,23 @@ func RegisterRepository(user schema.UserRegister) error {
 	return nil
 }
 
-func LoginRepository(user schema.UserLogin) error {
+func LoginRepository(user schema.UserLogin) (map[string]string, error) {
 	session := config.SESSION
-	var existingEmail string
 	var hashedPassword string
+	var userName string
+	var userId string
 
-	if err := session.Query(`SELECT email, password FROM user_by_email WHERE email = ? LIMIT 1`, user.Email).Scan(&existingEmail, &hashedPassword); err != nil {
+	if err := session.Query(`SELECT user_id, name, password FROM user_by_email WHERE email = ?`, user.Email).Scan(&userId, &userName, &hashedPassword); err != nil {
 		if err == gocql.ErrNotFound {
-			return fmt.Errorf("email does not exist")
+			return nil, fmt.Errorf("email does not exist")
 		}
-		return err
+		return nil, err
 	}
 
+	fmt.Println(user.Password, hashedPassword)
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password)); err != nil {
-		return fmt.Errorf("wrong password")
+		return nil, fmt.Errorf("wrong password")
 	}
 
-	return nil
+	return map[string]string{"user_id": userId, "name": userName, "email": user.Email}, nil
 }

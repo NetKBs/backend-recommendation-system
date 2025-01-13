@@ -8,11 +8,12 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Claims struct {
-	Username string `json:"username"`
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
 	jwt.StandardClaims
 }
 
@@ -23,7 +24,8 @@ func LoginController(c *gin.Context) {
 		return
 	}
 
-	if err := LoginRepository(user); err != nil {
+	userData, err := LoginRepository(user)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
@@ -35,7 +37,9 @@ func LoginController(c *gin.Context) {
 
 	expirationTime := time.Now().Add(24 * time.Hour) // 24h
 	var claims = Claims{
-		Username: user.Email,
+		UserID: userData["user_id"],
+		Name:   userData["name"],
+		Email:  userData["email"],
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -57,13 +61,6 @@ func RegisterController(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	user.Password = string(hashedPassword)
 
 	if err := RegisterRepository(user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
