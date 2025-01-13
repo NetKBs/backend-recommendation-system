@@ -31,12 +31,5 @@ func main() {
 	movie.RegisterRoutes(r)
 	user.RegisterRoutes(r)
 
-<<<<<<< HEAD
-	r.GET("/algorithm/:user_id", algorithm.AlgorithmController)
-
-	//algorithm.GenerateRecommendation("9aa2a501-4263-4049-af7d-9f13ad638b17")
-
-=======
->>>>>>> eba1e67037d78fbf2ad4c3173d50172fc307b827
 	r.Run()
 }
