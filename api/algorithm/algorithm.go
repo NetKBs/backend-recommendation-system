@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"sort"
+	"sync"
 )
 
 type PreResult struct {
@@ -68,6 +69,8 @@ func GenerateRecommendation(user_id string) ([]schema.ResultAlgorithm, error) {
 func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesId []string) ([]schema.ResultAlgorithm, error) {
 	lambda := 0.5
 	var results []PreResult
+	var mu sync.Mutex     // se usa para proteger el acceso concurrente a variables compartidas
+	var wg sync.WaitGroup // se para esperar que un conjunto de goroutines se complete
 
 	usersMovieCount, err := getUsersMovieCount(usersId)
 	if err != nil {
@@ -92,28 +95,38 @@ func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesI
 				continue
 			}
 
-			log.Println("i: ", i)
-			log.Println("movieWatched: ", movieWatched, "movieId: ", movieId)
+			wg.Add(1)
 
-			degreeMovieNotWatched, err := calculateDegreeOfMovie(movieId) // B
-			if err != nil {
-				return nil, err
-			}
+			go func(movieWatched, movieId string) {
+				defer wg.Done()
+				log.Println("i: ", i)
+				log.Println("movieWatched: ", movieWatched, "movieId: ", movieId)
 
-			leftPart := leftPart(degreeMovieNotWatched, degreeMovieWatched, lambda)
-			log.Println("leftPart: ", leftPart)
-			rightPart, err := rightPart(usersId, movieWatched, movieId, usersMovieCount)
-			log.Println("rightPart: ", rightPart)
-			if err != nil {
-				return nil, err
-			}
-			score := leftPart * rightPart
-			log.Println("score: ", score)
+				degreeMovieNotWatched, err := calculateDegreeOfMovie(movieId) // B
+				if err != nil {
+					return
+				}
 
-			results = append(results, PreResult{movieWatched, movieId, score})
+				leftPart := leftPart(degreeMovieNotWatched, degreeMovieWatched, lambda)
+				log.Println("leftPart: ", leftPart)
+				rightPart, err := rightPart(usersId, movieWatched, movieId, usersMovieCount)
+				log.Println("rightPart: ", rightPart)
+				if err != nil {
+					return
+				}
+				score := leftPart * rightPart
+				log.Println("score: ", score)
+
+				mu.Lock()
+				results = append(results, PreResult{movieWatched, movieId, score})
+				mu.Unlock()
+
+			}(movieWatched, movieId)
+
 		}
 	}
 
+	wg.Wait()
 	return GenerateFinalScore(results), nil
 }
 
