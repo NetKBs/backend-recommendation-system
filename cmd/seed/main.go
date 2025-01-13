@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"example/api/algorithm"
 	"example/api/schema"
 	"example/api/user"
 	"example/config"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -70,6 +70,8 @@ func LoadData() {
 		}
 	}
 
+	log.Println("Movies inserted")
+
 	// Users
 	gofakeit.Seed(111)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("1234"), bcrypt.DefaultCost)
@@ -97,13 +99,12 @@ func LoadData() {
 		}
 
 		usersId = append(usersId, newUUID.String())
+		log.Println("User ", i, " inserted")
 	}
 
 	// Watched movies
 	for _, user_id := range usersId {
-
 		numMoviesToWatch := gofakeit.Number(1, 100)
-		fmt.Println(numMoviesToWatch, user_id)
 
 		for i := 0; i < numMoviesToWatch; i++ {
 			movie_id := moviesId[i]
@@ -113,6 +114,14 @@ func LoadData() {
 			}
 		}
 
+	}
+
+	log.Println("Movies watched inserted")
+
+	// Generate new recommendations
+	for i, user_id := range usersId {
+		algorithm.GenerateRecommendation(user_id)
+		log.Print("Recommendations generated for user ", i)
 	}
 
 }

@@ -80,8 +80,8 @@ func InitDB() {
             user_id uuid,
             movie_id uuid,
             score float,
-            PRIMARY KEY ((user_id), score, movie_id)
-        ) WITH CLUSTERING ORDER BY (score DESC);`,
+            PRIMARY KEY ((user_id), movie_id)
+        )`,
 
 		`CREATE TABLE IF NOT EXISTS user_by_id (
             user_id uuid,
