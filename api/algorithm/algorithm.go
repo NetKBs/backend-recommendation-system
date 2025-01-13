@@ -4,7 +4,6 @@ import (
 	"example/api/schema"
 	"example/config"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"sync"
@@ -77,20 +76,13 @@ func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesI
 		return nil, err
 	}
 
-	for user, movieCount := range usersMovieCount {
-		log.Println(user, movieCount)
-	}
-
-	log.Println("STARTED")
-
 	for _, movieWatched := range moviesWatched { // For each movie watched
 		degreeMovieWatched, err := calculateDegreeOfMovie(movieWatched) // A
-		log.Println("degreeMovieWatched: ", degreeMovieWatched)
 		if err != nil {
 			return nil, err
 		}
 
-		for i, movieId := range moviesId { // For each movie in the database
+		for _, movieId := range moviesId { // For each movie in the database
 			if checkIfMovieIsWatched(moviesWatched, movieId) { // if the movie is watched by the user
 				continue
 			}
@@ -99,8 +91,6 @@ func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesI
 
 			go func(movieWatched, movieId string) {
 				defer wg.Done()
-				log.Println("i: ", i)
-				log.Println("movieWatched: ", movieWatched, "movieId: ", movieId)
 
 				degreeMovieNotWatched, err := calculateDegreeOfMovie(movieId) // B
 				if err != nil {
@@ -108,14 +98,11 @@ func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesI
 				}
 
 				leftPart := leftPart(degreeMovieNotWatched, degreeMovieWatched, lambda)
-				log.Println("leftPart: ", leftPart)
 				rightPart, err := rightPart(usersId, movieWatched, movieId, usersMovieCount)
-				log.Println("rightPart: ", rightPart)
 				if err != nil {
 					return
 				}
 				score := leftPart * rightPart
-				log.Println("score: ", score)
 
 				mu.Lock()
 				results = append(results, PreResult{movieWatched, movieId, score})
