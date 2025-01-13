@@ -34,5 +34,7 @@ func main() {
 
 	r.GET("/algorithm/:user_id", algorithm.AlgorithmController)
 
+	//algorithm.GenerateRecommendation("9aa2a501-4263-4049-af7d-9f13ad638b17")
+
 	r.Run()
 }

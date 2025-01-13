@@ -147,6 +147,7 @@ func rightPart(usersId []string, movieWatchedId string, movieNotWatched string, 
 			a2 = 1
 		}
 
+		log.Println("a1: ", a1, "a2: ", a2, "kj: ", kj)
 		result += (float64(a1) * float64(a2)) / float64(kj)
 	}
 
