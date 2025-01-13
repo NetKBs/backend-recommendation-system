@@ -33,3 +33,15 @@ type UserLogin struct {
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
+
+type UserResponse struct {
+	ID    gocql.UUID `json:"user_id"`
+	Name  string     `json:"name"`
+	Email string     `json:"email"`
+}
+
+type UserUpdate struct {
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}

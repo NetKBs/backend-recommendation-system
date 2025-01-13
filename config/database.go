@@ -27,19 +27,8 @@ func ConnectDB() {
 
 func InitDB() {
 	commands := []string{
-		`CREATE TABLE IF NOT EXISTS users (
-            user_id uuid PRIMARY KEY,
-            name text,
-            email text,
-            password text
-        );`,
-		`CREATE TABLE IF NOT EXISTS uniqueness_emails (
-            email text PRIMARY KEY,
-            user_id uuid,
-
-        );`,
-		`CREATE TABLE IF NOT EXISTS movies (
-            movie_id uuid PRIMARY KEY,
+		`CREATE TABLE IF NOT EXISTS movie (
+            movie_id uuid,
             poster_link text,
             series_title text,
             released_year text,
@@ -55,26 +44,60 @@ func InitDB() {
             star3 text,
             star4 text,
             no_of_votes text,
-            gross text
+            gross text,
+            PRIMARY KEY (movie_id)
         );`,
-		`CREATE TABLE IF NOT EXISTS movies_watched_by_users (
+
+		`CREATE CUSTOM INDEX IF NOT EXISTS idx_title ON movie (series_title) 
+            USING 'org.apache.cassandra.index.sasi.SASIIndex' 
+            WITH OPTIONS = {
+            'mode': 'CONTAINS', 
+            'analyzer_class': 'org.apache.cassandra.index.sasi.analyzer.NonTokenizingAnalyzer', 
+            'case_sensitive': 'false'};`,
+
+		`CREATE CUSTOM INDEX IF NOT EXISTS idx_genre ON movie (genre) 
+            USING 'org.apache.cassandra.index.sasi.SASIIndex' 
+            WITH OPTIONS = {
+            'mode': 'CONTAINS', 
+            'analyzer_class': 'org.apache.cassandra.index.sasi.analyzer.NonTokenizingAnalyzer', 
+            'case_sensitive': 'false'};`,
+
+		`CREATE TABLE IF NOT EXISTS movie_watched_by_user (
             user_id uuid,
             movie_id uuid,
             watched_at timestamp,
             PRIMARY KEY ((user_id), movie_id)
         );`,
-		`CREATE TABLE IF NOT EXISTS users_by_movie_watched (
+
+		`CREATE TABLE IF NOT EXISTS user_by_movie_watched (
             movie_id uuid,
             user_id uuid,
             watched_at timestamp,
             PRIMARY KEY ((movie_id), user_id)
         );`,
-		`CREATE TABLE IF NOT EXISTS recommendations_by_user (
+
+		`CREATE TABLE IF NOT EXISTS recommendation_by_user (
             user_id uuid,
             movie_id uuid,
             score float,
             PRIMARY KEY ((user_id), score, movie_id)
         ) WITH CLUSTERING ORDER BY (score DESC);`,
+
+		`CREATE TABLE IF NOT EXISTS user_by_id (
+            user_id uuid,
+            name text,
+            email text,
+            password text,
+            PRIMARY KEY (user_id)
+        );`,
+
+		`CREATE TABLE IF NOT EXISTS user_by_email (
+            email text,
+            user_id uuid,
+            name text,
+            password text,
+            PRIMARY KEY (email)
+        );`,
 	}
 
 	for _, command := range commands {

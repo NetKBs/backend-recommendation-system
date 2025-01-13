@@ -14,18 +14,26 @@ func RegisterRepository(user schema.UserRegister) error {
 	session := config.SESSION
 	newUUID := gocql.UUID(uuid.New())
 
-	var email string
-	var userID gocql.UUID
-	applied, err := session.Query(`INSERT INTO uniqueness_emails (email, user_id) VALUES (?, ?) IF NOT EXISTS`, user.Email, newUUID).ScanCAS(&email, &userID)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	if !applied {
+
+	var email string
+	if err := session.Query(`SELECT email FROM user_by_email WHERE email = ?`, user.Email).Scan(&email); err != nil {
+		if err != gocql.ErrNotFound {
+			return err
+		}
+	}
+	if email != "" {
 		return fmt.Errorf("email already exists")
 	}
 
-	if err := session.Query(`INSERT INTO users (user_id, name, email, password) VALUES (?, ?, ?, ?)`,
-		newUUID, user.Name, user.Email, user.Password).Exec(); err != nil {
+	if err := session.Query(`INSERT INTO user_by_email (email, user_id, name, password) VALUES (?, ?, ?, ?)`, user.Email, newUUID, user.Name, string(hashedPassword)).Exec(); err != nil {
+		return err
+	}
+	if err := session.Query(`INSERT INTO user_by_id (user_id, name, email, password) VALUES (?, ?, ?, ?)`,
+		newUUID, user.Name, user.Email, string(hashedPassword)).Exec(); err != nil {
 		return err
 	}
 
@@ -35,17 +43,12 @@ func RegisterRepository(user schema.UserRegister) error {
 func LoginRepository(user schema.UserLogin) error {
 	session := config.SESSION
 	var existingEmail string
-	var existingUserID gocql.UUID
+	var hashedPassword string
 
-	if err := session.Query(`SELECT email, user_id FROM uniqueness_emails WHERE email = ? LIMIT 1`, user.Email).Scan(&existingEmail, &existingUserID); err != nil {
+	if err := session.Query(`SELECT email, password FROM user_by_email WHERE email = ? LIMIT 1`, user.Email).Scan(&existingEmail, &hashedPassword); err != nil {
 		if err == gocql.ErrNotFound {
 			return fmt.Errorf("email does not exist")
 		}
-		return err
-	}
-
-	var hashedPassword string
-	if err := session.Query(`SELECT password FROM users WHERE user_id = ?`, existingUserID).Scan(&hashedPassword); err != nil {
 		return err
 	}
 

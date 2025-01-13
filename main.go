@@ -1,7 +1,10 @@
 package main
 
 import (
+	"example/api/algorithm"
 	"example/api/auth"
+	"example/api/movie"
+	"example/api/user"
 	"example/config"
 	"net/http"
 
@@ -26,6 +29,10 @@ func main() {
 	})
 
 	auth.RegisterRoutes(r)
+	movie.RegisterRoutes(r)
+	user.RegisterRoutes(r)
+
+	r.GET("/algorithm/:user_id", algorithm.AlgorithmController)
 
 	r.Run()
 }
