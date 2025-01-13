@@ -1,6 +1,7 @@
 package algorithm
 
 import (
+	"example/api/schema"
 	"example/config"
 	"fmt"
 	"log"
@@ -14,12 +15,7 @@ type PreResult struct {
 	score           float64
 }
 
-type Result struct {
-	movieNotWatched string
-	score           float64
-}
-
-func GenerateRecommendation(user_id string) ([]Result, error) {
+func GenerateRecommendation(user_id string) ([]schema.ResultAlgorithm, error) {
 	session := config.SESSION
 	var allMoviesId []string
 	var allUsersId []string
@@ -69,15 +65,24 @@ func GenerateRecommendation(user_id string) ([]Result, error) {
 
 }
 
-// Using recommendation algorithm Hybrid (HeatS and ProbS) to create recommendations
-// based on the movies watched by the user and the users who watched them
-func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesId []string) ([]Result, error) {
+func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesId []string) ([]schema.ResultAlgorithm, error) {
 	lambda := 0.5
 	var results []PreResult
+
+	usersMovieCount, err := getUsersMovieCount(usersId)
+	if err != nil {
+		return nil, err
+	}
+
+	for user, movieCount := range usersMovieCount {
+		log.Println(user, movieCount)
+	}
+
 	log.Println("STARTED")
 
 	for _, movieWatched := range moviesWatched { // For each movie watched
 		degreeMovieWatched, err := calculateDegreeOfMovie(movieWatched) // A
+		log.Println("degreeMovieWatched: ", degreeMovieWatched)
 		if err != nil {
 			return nil, err
 		}
@@ -94,14 +99,10 @@ func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesI
 			if err != nil {
 				return nil, err
 			}
-			if degreeMovieNotWatched == 0 { // if the movie is not watched by anyone
-				log.Println("movie not watched is not watched by anyone")
-				continue
-			}
 
 			leftPart := leftPart(degreeMovieNotWatched, degreeMovieWatched, lambda)
 			log.Println("leftPart: ", leftPart)
-			rightPart, err := rightPart(usersId, movieWatched, movieId)
+			rightPart, err := rightPart(usersId, movieWatched, movieId, usersMovieCount)
 			log.Println("rightPart: ", rightPart)
 			if err != nil {
 				return nil, err
@@ -120,34 +121,30 @@ func leftPart(degreeMovieNotWatched int, degreeMovieWatched int, lambda float64)
 	return 1 / (math.Pow(float64(degreeMovieWatched), (1-lambda)) * math.Pow(float64(degreeMovieNotWatched), (lambda)))
 }
 
-func rightPart(usersId []string, movieWatchedId string, movieNotWatched string) (float64, error) {
+func rightPart(usersId []string, movieWatchedId string, movieNotWatched string, usersMovieCount map[string]int) (float64, error) {
 	var result float64
-	usersMovieCount, err := getUsersMovieCount(usersId)
-	log.Println("USERS MOVIE COUNT DONE")
-	if err != nil {
-		return 0, err
-	}
 
 	for _, userId := range usersId {
 		// check the number of movies which the user has interacted
 		kj := usersMovieCount[userId]
-		// avoid division by zero
-		if kj == 0 {
-			continue
-		}
 
 		a1 := 0
 		a2 := 0
 
-		if watched, err := checkIfUserWatchedTheMovie(userId, movieWatchedId); err != nil {
-			if watched {
-				a1 = 1
-			}
+		watched, err := checkIfUserWatchedTheMovie(userId, movieWatchedId)
+		if err != nil {
+			return 0, err
 		}
-		if watched, err := checkIfUserWatchedTheMovie(userId, movieNotWatched); err != nil {
-			if watched {
-				a2 = 1
-			}
+		if watched {
+			a1 = 1
+		}
+
+		watched, err = checkIfUserWatchedTheMovie(userId, movieNotWatched)
+		if err != nil {
+			return 0, err
+		}
+		if watched {
+			a2 = 1
 		}
 
 		result += (float64(a1) * float64(a2)) / float64(kj)
@@ -171,7 +168,7 @@ func getUsersMovieCount(usersId []string) (map[string]int, error) {
 	return userMovieCount, nil
 }
 
-func GenerateFinalScore(results []PreResult) []Result {
+func GenerateFinalScore(results []PreResult) []schema.ResultAlgorithm {
 
 	// Normalize the scores
 	var total float64
@@ -188,13 +185,16 @@ func GenerateFinalScore(results []PreResult) []Result {
 		finalResults[result.movieNotWatched] += result.score
 	}
 
-	var finalResultsSlice []Result
-	for movie, score := range finalResults {
-		finalResultsSlice = append(finalResultsSlice, Result{movie, score})
+	var finalResultsSlice []schema.ResultAlgorithm
+
+	for movieId, score := range finalResults {
+		result := schema.ResultAlgorithm{MovieNotWatched: movieId, Score: score}
+		finalResultsSlice = append(finalResultsSlice, result)
 	}
 
+	// Sort the result efficiently
 	sort.Slice(finalResultsSlice, func(i, j int) bool {
-		return finalResultsSlice[i].score > finalResultsSlice[j].score
+		return finalResultsSlice[i].Score > finalResultsSlice[j].Score
 	})
 
 	return finalResultsSlice

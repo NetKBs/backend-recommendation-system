@@ -45,3 +45,8 @@ type UserUpdate struct {
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
+
+type ResultAlgorithm struct {
+	MovieNotWatched string  `json:"movie_not_watched"`
+	Score           float64 `json:"score"`
+}
