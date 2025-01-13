@@ -46,7 +46,13 @@ type UserUpdate struct {
 	Password string `json:"password" binding:"required"`
 }
 
-type ResultAlgorithm struct {
-	MovieNotWatched string  `json:"movie_not_watched"`
-	Score           float64 `json:"score"`
+type RecommendationCreate struct {
+	UserID  string  `json:"user_id"`
+	MovieID string  `json:"movie_id"`
+	Score   float64 `json:"score"`
+}
+
+type RecommendationResponse struct {
+	MovieID string  `json:"movie_id"`
+	Score   float32 `json:"score"`
 }

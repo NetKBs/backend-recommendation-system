@@ -1,6 +1,7 @@
 package user
 
 import (
+	"example/api/algorithm"
 	"example/api/schema"
 	"net/http"
 
@@ -21,8 +22,9 @@ func WatchMovieController(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Movie watched successfully"})
+	go algorithm.GenerateRecommendation(userID)
 
+	c.JSON(http.StatusOK, gin.H{"message": "Movie watched successfully"})
 }
 
 func GetUserHistoryController(c *gin.Context) {
@@ -118,4 +120,11 @@ func GetUserRecommendationsController(c *gin.Context) {
 		return
 	}
 
+	recommendations, err := GetUserRecommendationsRepository(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, recommendations)
 }
