@@ -4,8 +4,8 @@ import (
 	"example/api/schema"
 	"example/config"
 	"fmt"
+	"log"
 	"math"
-	"sort"
 	"sync"
 )
 
@@ -15,7 +15,7 @@ type PreResult struct {
 	score           float64
 }
 
-func GenerateRecommendation(user_id string) ([]schema.ResultAlgorithm, error) {
+func GenerateRecommendation(user_id string) {
 	session := config.SESSION
 	var allMoviesId []string
 	var allUsersId []string
@@ -28,11 +28,11 @@ func GenerateRecommendation(user_id string) ([]schema.ResultAlgorithm, error) {
 		watchedMoviesId = append(watchedMoviesId, movieID)
 	}
 	if err := iter.Close(); err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	if len(watchedMoviesId) == 0 {
-		return nil, nil
+		log.Println("No movies watched by the user")
 	}
 
 	// Fetch movies watched by anyone
@@ -42,7 +42,7 @@ func GenerateRecommendation(user_id string) ([]schema.ResultAlgorithm, error) {
 		allMoviesId = append(allMoviesId, movieId)
 	}
 	if err := iter.Close(); err != nil {
-		return nil, err
+		log.Println(err)
 	}
 
 	// Fetch all users that has watched a movie
@@ -52,20 +52,29 @@ func GenerateRecommendation(user_id string) ([]schema.ResultAlgorithm, error) {
 		allUsersId = append(allUsersId, userID)
 	}
 	if err := iter.Close(); err != nil {
-		return nil, err
+		log.Println(err)
 	}
 
 	fmt.Println("allUsersId: ", len(allUsersId), "allMoviesId: ", len(allMoviesId), "watchedMoviesId: ", len(watchedMoviesId))
 
-	result, err := Algorithm(user_id, watchedMoviesId, allUsersId, allMoviesId)
+	results, err := Algorithm(user_id, watchedMoviesId, allUsersId, allMoviesId)
 	if err != nil {
-		return nil, err
+		log.Println(err)
 	}
-	return result, nil
 
+	// save
+	for _, result := range results {
+		score := float32(result.Score)
+		fmt.Println(result.Score, score)
+		if err := config.SESSION.Query(`INSERT INTO recommendation_by_user (user_id, movie_id, score) VALUES (?, ?, ?)`, result.UserID, result.MovieID, score).Exec(); err != nil {
+			log.Printf("Error: %v\n", err)
+		}
+	}
+
+	log.Println("Algorithm finished")
 }
 
-func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesId []string) ([]schema.ResultAlgorithm, error) {
+func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesId []string) ([]schema.RecommendationCreate, error) {
 	lambda := 0.5
 	var results []PreResult
 	var mu sync.Mutex     // se usa para proteger el acceso concurrente a variables compartidas
@@ -114,7 +123,12 @@ func Algorithm(user_id string, moviesWatched []string, usersId []string, moviesI
 	}
 
 	wg.Wait()
-	return GenerateFinalScore(results), nil
+	finalResults, err := GenerateFinalScore(results, user_id)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalResults, nil
 }
 
 func leftPart(degreeMovieNotWatched int, degreeMovieWatched int, lambda float64) float64 {
@@ -153,22 +167,7 @@ func rightPart(usersId []string, movieWatchedId string, movieNotWatched string, 
 	return result, nil
 }
 
-func getUsersMovieCount(usersId []string) (map[string]int, error) {
-	session := config.SESSION
-	userMovieCount := make(map[string]int)
-
-	for _, userId := range usersId {
-		var count int
-		if err := session.Query(`SELECT COUNT(movie_id) FROM movie_watched_by_user WHERE user_id = ?`, userId).Scan(&count); err != nil {
-			return nil, err
-		}
-		userMovieCount[userId] = count
-	}
-
-	return userMovieCount, nil
-}
-
-func GenerateFinalScore(results []PreResult) []schema.ResultAlgorithm {
+func GenerateFinalScore(results []PreResult, userId string) ([]schema.RecommendationCreate, error) {
 
 	// Normalize the scores
 	var total float64
@@ -185,19 +184,29 @@ func GenerateFinalScore(results []PreResult) []schema.ResultAlgorithm {
 		finalResults[result.movieNotWatched] += result.score
 	}
 
-	var finalResultsSlice []schema.ResultAlgorithm
+	var finalResultsSlice []schema.RecommendationCreate
 
 	for movieId, score := range finalResults {
-		result := schema.ResultAlgorithm{MovieNotWatched: movieId, Score: score}
+		result := schema.RecommendationCreate{UserID: userId, MovieID: movieId, Score: score}
 		finalResultsSlice = append(finalResultsSlice, result)
 	}
 
-	// Sort the result efficiently
-	sort.Slice(finalResultsSlice, func(i, j int) bool {
-		return finalResultsSlice[i].Score > finalResultsSlice[j].Score
-	})
+	return finalResultsSlice, nil
+}
 
-	return finalResultsSlice
+func getUsersMovieCount(usersId []string) (map[string]int, error) {
+	session := config.SESSION
+	userMovieCount := make(map[string]int)
+
+	for _, userId := range usersId {
+		var count int
+		if err := session.Query(`SELECT COUNT(movie_id) FROM movie_watched_by_user WHERE user_id = ?`, userId).Scan(&count); err != nil {
+			return nil, err
+		}
+		userMovieCount[userId] = count
+	}
+
+	return userMovieCount, nil
 }
 
 func calculateDegreeOfMovie(movieId string) (int, error) {

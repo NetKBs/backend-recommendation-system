@@ -9,6 +9,23 @@ import (
 	"github.com/gocql/gocql"
 )
 
+func GetUserRecommendationsRepository(user_id string) ([]schema.RecommendationResponse, error) {
+	session := config.SESSION
+	var recommendations []schema.RecommendationResponse
+	var rec schema.RecommendationResponse
+
+	iter := session.Query(`SELECT movie_id, score FROM recommendation_by_user WHERE user_id = ?`, user_id).Iter()
+
+	for iter.Scan(&rec.MovieID, &rec.Score) {
+		recommendations = append(recommendations, rec)
+	}
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+
+	return recommendations, nil
+}
+
 func GetUserHistoryRepository(user_id string) ([]string, error) {
 	session := config.SESSION
 	var movies_id []string
@@ -58,8 +75,11 @@ func WatchMovieRepository(user_id string, movie_id string) error {
 		return err
 	}
 
-	return nil
+	if err := session.Query(`DELETE FROM recommendation_by_user WHERE user_id = ? AND movie_id = ?`, user_id, movie_id).Exec(); err != nil {
+		return err
+	}
 
+	return nil
 }
 
 func GetUsersRepository() ([]schema.UserResponse, error) {
