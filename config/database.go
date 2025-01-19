@@ -79,7 +79,7 @@ func InitDB() {
 		`CREATE TABLE IF NOT EXISTS recommendation_by_user (
             user_id uuid,
             movie_id uuid,
-            score float,
+            score double,
             PRIMARY KEY ((user_id), movie_id)
         )`,
 

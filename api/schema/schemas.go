@@ -54,5 +54,5 @@ type RecommendationCreate struct {
 
 type RecommendationResponse struct {
 	MovieID string  `json:"movie_id"`
-	Score   float32 `json:"score"`
+	Score   float64 `json:"score"`
 }

@@ -69,8 +69,7 @@ func GenerateRecommendation(user_id string) {
 
 	// save
 	for _, result := range results {
-		score := float32(result.Score)
-		if err := config.SESSION.Query(`INSERT INTO recommendation_by_user (user_id, movie_id, score) VALUES (?, ?, ?)`, result.UserID, result.MovieID, score).Exec(); err != nil {
+		if err := config.SESSION.Query(`INSERT INTO recommendation_by_user (user_id, movie_id, score) VALUES (?, ?, ?)`, result.UserID, result.MovieID, result.Score).Exec(); err != nil {
 			log.Printf("Error: %v\n", err)
 		}
 	}
@@ -173,23 +172,22 @@ func rightPart(usersId []string, movieWatchedId string, movieNotWatched string, 
 
 func GenerateFinalScore(results []PreResult, userId string) ([]schema.RecommendationCreate, error) {
 
-	// Normalize the scores
-	var total float64
-	for _, result := range results {
-		total += result.score
-	}
-	for _, result := range results {
-		result.score = result.score / total
-	}
-
-	// Aggregate the scores
+	// Agrupar los scores por películas no vistas
 	var finalResults = make(map[string]float64)
 	for _, result := range results {
 		finalResults[result.movieNotWatched] += result.score
 	}
 
-	var finalResultsSlice []schema.RecommendationCreate
+	// Normalizar los scores finales
+	var total float64
+	for _, score := range finalResults {
+		total += score
+	}
+	for movieId, score := range finalResults {
+		finalResults[movieId] = score / total
+	}
 
+	var finalResultsSlice []schema.RecommendationCreate
 	for movieId, score := range finalResults {
 		result := schema.RecommendationCreate{UserID: userId, MovieID: movieId, Score: score}
 		finalResultsSlice = append(finalResultsSlice, result)

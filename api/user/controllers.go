@@ -4,6 +4,7 @@ import (
 	"example/api/algorithm"
 	"example/api/schema"
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -121,6 +122,10 @@ func GetUserRecommendationsController(c *gin.Context) {
 	}
 
 	recommendations, err := GetUserRecommendationsRepository(id)
+	sort.SliceStable(recommendations, func(i, j int) bool {
+		return recommendations[i].Score > recommendations[j].Score
+	})
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -112,10 +112,10 @@ func LoadData() {
 			if err := user.WatchMovieRepository(user_id, movie_id); err != nil {
 				log.Fatalf("Error al insertar la pelicula en movie_watched_by_user: %v", err)
 			}
+
 		}
 
 	}
-
 	log.Println("Movies watched inserted")
 
 	// Generate new recommendations
